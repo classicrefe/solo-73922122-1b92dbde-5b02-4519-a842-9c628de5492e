@@ -6,8 +6,9 @@ services:
       POSTGRES_PASSWORD: recon
       POSTGRES_DB: recon
     volumes:
-      # 仅首次启动自动执行初始化 SQL
+      # 仅首次启动自动执行初始化 SQL（init.sql 通过 \ir 引用 lineage.sql）
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./sql/lineage.sql:/docker-entrypoint-initdb.d/lineage.sql:ro
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U recon -d recon"]
@@ -34,6 +35,7 @@ services:
       MAX_DIFF_TYPES: "20"
       WORK_DIR: /tmp/recon-work
       PG_STATEMENT_TIMEOUT_MS: "28000"
+      ATTRIBUTION_ROW_LIMIT: "10000"
     ports:
       - "8000:8000"
     volumes:

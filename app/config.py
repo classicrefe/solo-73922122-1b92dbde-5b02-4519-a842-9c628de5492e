@@ -39,6 +39,9 @@ class Settings:
     # 暂存目录（容器内），独立挂载 tmpfs / 卷
     work_dir: str = _env("WORK_DIR", "/tmp/recon-work")
 
+    # 单表日归属查询单次最多返回的读数行数（超出时 truncated=true）
+    attribution_row_limit: int = _env_int("ATTRIBUTION_ROW_LIMIT", 10000)
+
     # 允许出现在结果集中的列类型（PostgreSQL 类型名 -> psycopg 加载后的 Python 类型）
     allowed_pg_types: tuple[str, ...] = ("bigint", "text")
 

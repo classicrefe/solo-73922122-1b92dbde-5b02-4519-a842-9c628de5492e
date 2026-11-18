@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS readings (
 -- 日结常用过滤索引
 CREATE INDEX IF NOT EXISTS idx_readings_time ON readings (read_time);
 
+-- 转线登记表（独立文件；相对路径相对本脚本所在目录解析。
+-- 容器内两文件同挂在 /docker-entrypoint-initdb.d；应用启动时也会幂等执行同一份 DDL）
+\ir lineage.sql
+
 -- ---------- 示例档案：3 条产线、6 块表 ----------
 INSERT INTO meters (meter_id, line_name) VALUES
     (1001, 'A线'),
@@ -44,6 +48,15 @@ INSERT INTO readings (meter_id, read_time, wh) VALUES
     (3001, TIMESTAMPTZ '2026-11-15 09:00:00+00',  880),
     (3002, TIMESTAMPTZ '2026-11-15 08:00:00+00',  300),
     (3002, TIMESTAMPTZ '2026-11-15 09:00:00+00',  420)
+ON CONFLICT DO NOTHING;
+
+-- ---------- 转线示例：表 1001 在 2026-11-15 09:00 UTC 从 A线 转到 B线 ----------
+-- 同时写入公元 1 年 UTC 基线行（原产线 A线），09:00 及之后的读数归 B线，
+-- 更早的读数仍归 A线。该组数据也可在 /docs 里通过 POST /meters/1001/transfers
+-- 自行登记后，再用 GET /meters/1001/readings?date=2026-11-15 验证。
+INSERT INTO meter_line_transfers (meter_id, effective_at, target_line) VALUES
+    (1001, TIMESTAMPTZ '0001-01-01 00:00:00+00', 'A线'),
+    (1001, TIMESTAMPTZ '2026-11-15 09:00:00+00', 'B线')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================

@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 INIT_SQL = Path(__file__).resolve().parents[1] / "sql" / "init.sql"
+LINEAGE_SQL = Path(__file__).resolve().parents[1] / "sql" / "lineage.sql"
 
 
 def _can_connect(dsn: str) -> bool:
@@ -46,11 +47,19 @@ def pg_dsn() -> str:
 
 @pytest.fixture(scope="session", autouse=True)
 def _init_schema(pg_dsn: str) -> None:
+    import re
+
     import psycopg
+
+    # psycopg 不识别 psql 元命令 \ir：先剥掉该行，再按顺序执行两个 SQL 文件
+    # （与容器内 docker-entrypoint-initdb.d 的执行效果一致，均为幂等 DDL/DML）
+    init_text = INIT_SQL.read_text(encoding="utf-8")
+    init_text = re.sub(r"^\\ir .*$", "", init_text, flags=re.MULTILINE)
 
     conn = psycopg.connect(pg_dsn, autocommit=True)
     try:
-        conn.execute(INIT_SQL.read_text(encoding="utf-8"))
+        conn.execute(LINEAGE_SQL.read_text(encoding="utf-8"))
+        conn.execute(init_text)
     finally:
         conn.close()
 
